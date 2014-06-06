@@ -9,8 +9,6 @@
 #include <sys/inotify.h>
 #define FAIL	EXIT_FAILURE
 #define SUCCESS	EXIT_SUCCESS
-#define dbg printf
-#define TIMEOUT	1
 
 struct list {
 	size_t length;
@@ -25,6 +23,7 @@ struct list *list_create(int);
 void list_populate(struct list*);
 size_t list_count(struct list*);
 void list_free(struct list*);
+void watch_and_wait(int,int);
 void in_message(char*);
 void out_message(char*);
 
@@ -117,8 +116,6 @@ int main()
 	bool f_initialshow = true;
 
 	/* Variables */
-	fd_set watch;
-	struct timeval watchtimeout;
 	struct list *beforelist, *afterlist;
 	int fd;
 	int stdout_fileno;
@@ -142,12 +139,10 @@ int main()
 	if(f_forking)
 	{
 		pid_t pid = fork();
-		dbg("Forked!\n");
 		if(pid > 0)
 			exit(0);
 		else if(pid == -1)
 			fatalperror("fork");
-		dbg("Child.\n");
 	}
 
 	/* Start and setup inotify */
@@ -161,33 +156,10 @@ int main()
 	{
 		list_populate(beforelist);
 
-		/* FIXME if the below fixme gets implemented, why not move all the select() stuff into a function, to make the main loop cleaner? */
-		/* FIXME Could we maybe use select() all the time, and set the watchtimeout pointer to NULL when not fork()ing??? */
 		/* If we are fork()ing, we want to monitor stdout, which requires us to use select() with a timeout */
 		if(f_forking)
 		{
-			dbg("Watching and waiting...\n");
-			while(1)
-			{
-				FD_ZERO(&watch);
-				FD_SET(fd, &watch);
-				watchtimeout.tv_usec = 0;
-				watchtimeout.tv_sec = TIMEOUT;
-				int ret = select(fd+1, &watch, NULL, NULL, &watchtimeout);
-				if(ret == 0)
-				{
-					if(!isatty(stdout_fileno))
-						exit(0);
-				}
-				else if(ret > 0)
-				{
-					break;
-				}
-				else
-				{
-					fatalperror("select");
-				}
-			}
+			watch_and_wait(fd, stdout_fileno);
 		}
 
 		struct inotify_event evt;
@@ -252,6 +224,29 @@ char *strsubtract(char **bigarray, char **smallarray)
 	}
 	return NULL;
 }
+
+void watch_and_wait(int inotifyfd, int stdoutfd)
+{
+	while(1)
+	{
+		fd_set read;
+		struct timeval watchtimeout;
+		FD_ZERO(&read);
+		FD_SET(inotifyfd, &read);
+		watchtimeout.tv_sec = 30;
+		watchtimeout.tv_usec = 0;
+		int ret = select(inotifyfd+1, &read, NULL, NULL, &watchtimeout);
+		if(ret < 0)
+		{
+			fatalperror("select");
+		}
+		if(!isatty(stdoutfd))
+			exit(0);
+		if(ret > 0)
+			break;
+	}
+}
+
 
 void in_message(char *name)
 {
