@@ -23,11 +23,12 @@ struct list *list_create(int);
 void list_populate(struct list*);
 size_t list_count(struct list*);
 void list_free(struct list*);
+void free_mem_on_exit(void);
 void watch_and_wait(int,int);
 void in_message(char*);
 void out_message(char*);
 
-struct list beforelist, afterlist;
+struct list *beforelist, *afterlist;
 
 void fatalperror(char *s)
 {
@@ -71,7 +72,7 @@ void list_populate(struct list *l)
 			if(l->array[i] == NULL)
 				fatalperror("malloc");
 			strcpy(l->array[i], tmp->ut_user);
-			l->array[++i] = NULL; //TODO FIXME DOUBLE CHECK THIS CODE!!
+			l->array[++i] = NULL;
 		}
 	}
 	endutxent();
@@ -114,9 +115,10 @@ int main()
 	bool f_oneshot = true;
 	bool f_forking = true;
 	bool f_initialshow = true;
+	bool f_showins = true;
+	bool f_showouts = true;
 
 	/* Variables */
-	struct list *beforelist, *afterlist;
 	int fd;
 	int stdout_fileno;
 
@@ -124,6 +126,9 @@ int main()
 	afterlist = list_create(8);
 	beforelist = list_create(8);
 	stdout_fileno = fileno(stdout);
+
+	/* Set up atexit */
+	atexit(free_mem_on_exit);
 
 	/* Read conf file */
 	/* TODO */
@@ -180,20 +185,20 @@ int main()
 			char *r = strsubtract(beforelist->array, afterlist->array);
 			if(r == NULL)
 				continue;
-			out_message(r);
+			if(f_showouts)
+				out_message(r);
 		}
 		else
 		{
 			char *r = strsubtract(afterlist->array, beforelist->array);
 			if(r == NULL)
 				continue;
-			in_message(r);
+			if(f_showins)
+				in_message(r);
 		}
 
 		if(f_oneshot)
 		{
-			list_free(beforelist);
-			list_free(afterlist);
 			exit(0);
 		}
 	}
@@ -201,6 +206,11 @@ int main()
 	exit(SUCCESS);
 }
 
+void free_mem_on_exit(void)
+{
+	list_free(beforelist);
+	list_free(afterlist);
+}
 
 char *strsubtract(char **bigarray, char **smallarray)
 {
