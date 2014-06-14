@@ -4,8 +4,6 @@
 #include "errors.h"
 #include "userlist.h"
 
-static void ul_internal_resize(char ***list, size_t *size);
-
 struct userlist *ul_create(int initial_length)
 {
 	struct userlist *ret = malloc(sizeof(struct userlist));
@@ -30,7 +28,11 @@ void ul_populate(struct userlist *l)
 		{
 			if(i + 1 == (int)l->length) // If the next item would be the end of the list, resize (remember, we want it to always be NULL-terminated)
 			{
-				ul_internal_resize(&l->array, &l->length);
+				char **tmp; // We need to do it in two steps so freemem (atexit) can free l->array even if realloc() failed
+				l->length *= 2;
+				if((tmp = realloc(l->array, l->length * sizeof(char*))) == NULL)
+					fatalperror("realloc");
+				l->array = tmp;
 			}
 			l->array[i] = malloc(strlen(tmp->ut_user) + 1);
 			if(l->array[i] == NULL)
@@ -86,13 +88,3 @@ void ul_free(struct userlist *l)
 	}
 	free(l);
 }
-
-static void ul_internal_resize(char ***list, size_t *size)
-{
-	*size *= 2;
-	void *tmp = realloc(*list, *size * sizeof(char*));
-	if(tmp == NULL)
-		fatalperror("realloc");
-	*list = tmp;
-}
-
