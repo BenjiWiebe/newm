@@ -21,7 +21,7 @@ struct userlist *beforelist, *afterlist;
 int main()
 {
 	/* Flags */
-	bool f_oneshot = true;
+	bool f_oneshot = false;
 	bool f_forking = true;
 	bool f_initialshow = true;
 	bool f_showins = true;
@@ -45,9 +45,16 @@ int main()
 	/* If we are supposed to print a user list upon startup, do it now, before fork()ing */
 	if(f_initialshow)
 	{
-		/* TODO */
+		struct userlist *ls = ul_create(8);
+		ul_populate(ls);
+		fprintf(stderr, "Users logged in: ");
+		for(int i = 0; ls->array[i] != NULL; i++)
+		{
+			fprintf(stderr, "%s, ", ls->array[i]);
+		}
+		fprintf(stderr, "\b\b  \n");
+		ul_free(ls);
 	}
-
 
 	/* If we are forking, fork() and then exit the parent */
 	if(f_forking)
@@ -57,6 +64,8 @@ int main()
 			exit(0);
 		else if(pid == -1)
 			fatalperror("fork");
+		/* This setpgid() call changes the process-group ID so 'w' reports the shell (not us!) as the current command */
+		setpgid(getpid(),getpid());
 	}
 
 	/* Start and setup inotify */
@@ -146,10 +155,10 @@ void watch_and_wait(int inotifyfd, int stdoutfd)
 
 void in_message(char *name)
 {
-	printf("\e[1m%s logged in.\e[0m\n", name);
+	printf("\a\n\n\e[31m\e[1m%s just logged in!\e[0m\n\n", name);
 }
 
 void out_message(char *name)
 {
-	printf("\e[1m%s logged out.\e[0m\n", name);
+	printf("\n\n\e[1m%s logged out.\e[0m\n\n", name);
 }
