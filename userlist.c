@@ -21,7 +21,10 @@ void ul_populate(struct userlist *l)
 {
 	struct utmpx *tmp;
 	for(int i = 0; l->array[i] != NULL; i++)
+	{
 		free(l->array[i]);
+		l->array[i] = NULL;
+	}
 	for(int i = 0; (tmp = getutxent()) != NULL;)
 	{
 		if(tmp->ut_type == USER_PROCESS)
