@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <utmpx.h>
+#include <stdbool.h>
 #include "errors.h"
 #include "userlist.h"
 
@@ -45,6 +46,25 @@ void ul_populate(struct userlist *l)
 		}
 	}
 	endutxent();
+}
+
+void ul_sort(struct userlist *l)
+{
+	bool done = false;
+	while(!done)
+	{
+		done = true;
+		for(int i = 1; l->array[i] != NULL; i++)
+		{
+			if(strcmp(l->array[i-1], l->array[i]) > 0)
+			{
+				char *tmp = l->array[i-1];
+				l->array[i-1] = l->array[i];
+				l->array[i] = tmp;
+				done = false;
+			}
+		}
+	}
 }
 
 size_t ul_count(struct userlist *l)

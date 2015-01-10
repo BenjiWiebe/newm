@@ -47,9 +47,12 @@ int main()
 	{
 		struct userlist *ls = ul_create(8);
 		ul_populate(ls);
+		ul_sort(ls);
 		fprintf(stderr, "Users logged in: ");
 		for(int i = 0; ls->array[i] != NULL; i++)
 		{
+			if(i > 0 && !strcmp(ls->array[i], ls->array[i-1]))
+				continue;
 			fprintf(stderr, "%s, ", ls->array[i]);
 		}
 		fprintf(stderr, "\b\b  \n");
