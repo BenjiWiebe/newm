@@ -18,15 +18,22 @@ void out_message(char*);
 
 struct userlist *beforelist, *afterlist;
 
+struct {
+	unsigned int oneshot :1;
+	unsigned int forking :1;
+	unsigned int initialshow :1;
+	unsigned int showins :1;
+	unsigned int showouts :1;
+} config = {
+	.oneshot = false,
+	.forking = true,
+	.initialshow = true,
+	.showins = true,
+	.showouts = true
+};
+
 int main()
 {
-	/* Flags */
-	bool f_oneshot = false;
-	bool f_forking = true;
-	bool f_initialshow = true;
-	bool f_showins = true;
-	bool f_showouts = true;
-
 	/* Variables */
 	int fd;
 	int stdout_fileno;
@@ -43,7 +50,7 @@ int main()
 	/* TODO */
 
 	/* If we are supposed to print a user list upon startup, do it now, before fork()ing */
-	if(f_initialshow)
+	if(config.initialshow)
 	{
 		struct userlist *ls = ul_create(8);
 		ul_populate(ls);
@@ -60,7 +67,7 @@ int main()
 	}
 
 	/* If we are forking, fork() and then exit the parent */
-	if(f_forking)
+	if(config.forking)
 	{
 		pid_t pid = fork();
 		if(pid > 0)
@@ -83,7 +90,7 @@ int main()
 		ul_populate(beforelist);
 
 		/* If we are fork()ing, we want to monitor stdout, which requires us to use select() with a timeout */
-		if(f_forking)
+		if(config.forking)
 		{
 			watch_and_wait(fd, stdout_fileno);
 		}
@@ -106,7 +113,7 @@ int main()
 			char *r = ul_subtract(beforelist, afterlist);
 			if(r == NULL)
 				continue;
-			if(f_showouts)
+			if(config.showouts)
 				out_message(r);
 		}
 		else
@@ -114,11 +121,11 @@ int main()
 			char *r = ul_subtract(afterlist, beforelist);
 			if(r == NULL)
 				continue;
-			if(f_showins)
+			if(config.showins)
 				in_message(r);
 		}
 
-		if(f_oneshot)
+		if(config.oneshot)
 		{
 			exit(0);
 		}
