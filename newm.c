@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
+#include <sys/wait.h>
 #include "errors.h"
 #include "userlist.h"
 #define FAIL	EXIT_FAILURE
@@ -15,6 +16,9 @@ void free_mem_on_exit(void);
 void watch_and_wait(int,int);
 void in_message(char*);
 void out_message(char*);
+void on_login(char*);
+void on_logout(char*);
+void run_command(char*);
 
 struct userlist *beforelist, *afterlist;
 
@@ -22,14 +26,22 @@ struct {
 	unsigned int oneshot :1;
 	unsigned int forking :1;
 	unsigned int initialshow :1;
-	unsigned int showins :1;
-	unsigned int showouts :1;
+	unsigned int listen_ins :1;
+	unsigned int listen_outs :1;
+	char *login_command;
+	char *login_message;
+	char *logout_command;
+	char *logout_message;
 } config = {
 	.oneshot = false,
 	.forking = true,
 	.initialshow = true,
-	.showins = true,
-	.showouts = true
+	.listen_ins = true,
+	.listen_outs = true,
+	.login_command = NULL,
+	.login_message = "",
+	.logout_command = NULL,
+	.logout_message = ""
 };
 
 int main()
@@ -66,6 +78,10 @@ int main()
 		ul_free(ls);
 	}
 
+	/* If we aren't supposed to listen to INs *or* OUTs, no point in continuing */
+	if(!config.listen_ins && !config.listen_outs)
+		exit(EXIT_SUCCESS);
+
 	/* If we are forking, fork() and then exit the parent */
 	if(config.forking)
 	{
@@ -77,6 +93,9 @@ int main()
 		/* This setpgid() call changes the process-group ID so 'w' reports the shell (not us!) as the current command */
 		setpgid(getpid(),getpid());
 	}
+
+	/* Set up child-reaping for login-command */
+	signal(SIGCHLD, SIG_IGN);
 
 	/* Start and setup inotify */
 	fd = inotify_init();
@@ -113,16 +132,16 @@ int main()
 			char *r = ul_subtract(beforelist, afterlist);
 			if(r == NULL)
 				continue;
-			if(config.showouts)
-				out_message(r);
+			if(config.listen_outs)
+				on_logout(r);
 		}
 		else
 		{
 			char *r = ul_subtract(afterlist, beforelist);
 			if(r == NULL)
 				continue;
-			if(config.showins)
-				in_message(r);
+			if(config.listen_ins)
+				on_login(r);
 		}
 
 		if(config.oneshot)
@@ -163,6 +182,25 @@ void watch_and_wait(int inotifyfd, int stdoutfd)
 	}
 }
 
+void run_command(char *cmd)
+{
+	pid_t pid = fork();
+	if(pid == 0) /* Child process */
+	{
+		system(cmd);
+		exit(EXIT_SUCCESS);
+	}
+	else if(pid == -1) /* Error */
+	{
+		fatalperror("fork");
+	}
+	else /* Parent, after child was successfully started */
+	{
+		waitpid((pid_t)-1, NULL, WNOHANG);
+	}
+
+}
+
 void in_message(char *name)
 {
 	printf("\a\n\n\e[31m\e[1m%s just logged in!\e[0m\n\n", name);
@@ -171,4 +209,20 @@ void in_message(char *name)
 void out_message(char *name)
 {
 	printf("\n\n\e[1m%s logged out.\e[0m\n\n", name);
+}
+
+void on_logout(char *name)
+{
+	if(config.logout_message != NULL)
+		out_message(name);
+	if(config.logout_command != NULL)
+		run_command(config.logout_command);
+}
+
+void on_login(char *name)
+{
+	if(config.login_message != NULL)
+		in_message(name);
+	if(config.login_command != NULL)
+		run_command(config.login_command);
 }
