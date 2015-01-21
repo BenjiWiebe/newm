@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <sys/inotify.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <pwd.h>
 #include "errors.h"
 #include "userlist.h"
 #define FAIL	EXIT_FAILURE
@@ -49,11 +51,19 @@ int main()
 	/* Variables */
 	int fd;
 	int stdout_fileno;
+	char *username;
 
 	/* Initialize variables */
 	afterlist = ul_create(8);
 	beforelist = ul_create(8);
 	stdout_fileno = fileno(stdout);
+
+	/* Get our username */
+	struct passwd *p = getpwuid(getuid());
+	if(p == NULL)
+		fatalperror("getpwuid");
+	/* warning - username will now point to a static area, subsequent getpwuid calls may overwite it */
+	username = p->pw_name;
 
 	/* Set up atexit */
 	atexit(free_mem_on_exit);
@@ -132,6 +142,8 @@ int main()
 			char *r = ul_subtract(beforelist, afterlist);
 			if(r == NULL)
 				continue;
+			if(!strcmp(r, username))
+				continue;
 			if(config.listen_outs)
 				on_logout(r);
 		}
@@ -139,6 +151,8 @@ int main()
 		{
 			char *r = ul_subtract(afterlist, beforelist);
 			if(r == NULL)
+				continue;
+			if(!strcmp(r, username))
 				continue;
 			if(config.listen_ins)
 				on_login(r);
