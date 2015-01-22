@@ -11,8 +11,11 @@
 #include <pwd.h>
 #include "errors.h"
 #include "userlist.h"
+#include "config.h"
 #define FAIL	EXIT_FAILURE
 #define SUCCESS	EXIT_SUCCESS
+
+const char *conf_file_basename = ".newmrc";
 
 void free_mem_on_exit(void);
 void watch_and_wait(int,int);
@@ -23,28 +26,7 @@ void on_logout(char*);
 void run_command(char*);
 
 struct userlist *beforelist, *afterlist;
-
-struct {
-	unsigned int oneshot :1;
-	unsigned int forking :1;
-	unsigned int initialshow :1;
-	unsigned int listen_ins :1;
-	unsigned int listen_outs :1;
-	char *login_command;
-	char *login_message;
-	char *logout_command;
-	char *logout_message;
-} config = {
-	.oneshot = false,
-	.forking = true,
-	.initialshow = true,
-	.listen_ins = true,
-	.listen_outs = true,
-	.login_command = NULL,
-	.login_message = "",
-	.logout_command = NULL,
-	.logout_message = ""
-};
+struct _config *config;
 
 int main()
 {
@@ -52,6 +34,8 @@ int main()
 	int fd;
 	int stdout_fileno;
 	char *username;
+	char *home;
+	char *conf_file_name;
 
 	/* Initialize variables */
 	afterlist = ul_create(8);
@@ -65,14 +49,24 @@ int main()
 	/* warning - username will now point to a static area, subsequent getpwuid calls may overwite it */
 	username = p->pw_name;
 
+	/* Get our home directory */
+	home = getenv("HOME");
+	if(home == NULL)
+		fatalerror("$HOME is not set.\n");
+	conf_file_name = malloc(strlen(home) + 1 + strlen(conf_file_basename) + 1);
+	strcpy(conf_file_name, home);
+	strcat(conf_file_name, "/");
+	strcat(conf_file_name, conf_file_basename);
+
+
 	/* Set up atexit */
 	atexit(free_mem_on_exit);
 
 	/* Read conf file */
-	/* TODO */
+	config = load_config(conf_file_name);
 
 	/* If we are supposed to print a user list upon startup, do it now, before fork()ing */
-	if(config.initialshow)
+	if(config->initialshow)
 	{
 		struct userlist *ls = ul_create(8);
 		ul_populate(ls);
@@ -89,11 +83,11 @@ int main()
 	}
 
 	/* If we aren't supposed to listen to INs *or* OUTs, no point in continuing */
-	if(!config.listen_ins && !config.listen_outs)
+	if(!config->listen_ins && !config->listen_outs)
 		exit(EXIT_SUCCESS);
 
 	/* If we are forking, fork() and then exit the parent */
-	if(config.forking)
+	if(config->forking)
 	{
 		pid_t pid = fork();
 		if(pid > 0)
@@ -119,7 +113,7 @@ int main()
 		ul_populate(beforelist);
 
 		/* If we are fork()ing, we want to monitor stdout, which requires us to use select() with a timeout */
-		if(config.forking)
+		if(config->forking)
 		{
 			watch_and_wait(fd, stdout_fileno);
 		}
@@ -144,7 +138,7 @@ int main()
 				continue;
 			if(!strcmp(r, username))
 				continue;
-			if(config.listen_outs)
+			if(config->listen_outs)
 				on_logout(r);
 		}
 		else
@@ -154,11 +148,11 @@ int main()
 				continue;
 			if(!strcmp(r, username))
 				continue;
-			if(config.listen_ins)
+			if(config->listen_ins)
 				on_login(r);
 		}
 
-		if(config.oneshot)
+		if(config->oneshot)
 		{
 			exit(0);
 		}
@@ -227,16 +221,16 @@ void out_message(char *name)
 
 void on_logout(char *name)
 {
-	if(config.logout_message != NULL)
+	if(config->logout_message != NULL)
 		out_message(name);
-	if(config.logout_command != NULL)
-		run_command(config.logout_command);
+	if(config->logout_command != NULL)
+		run_command(config->logout_command);
 }
 
 void on_login(char *name)
 {
-	if(config.login_message != NULL)
+	if(config->login_message != NULL)
 		in_message(name);
-	if(config.login_command != NULL)
-		run_command(config.login_command);
+	if(config->login_command != NULL)
+		run_command(config->login_command);
 }

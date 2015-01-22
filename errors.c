@@ -14,3 +14,7 @@ void fatalerror(char *s)
 	exit(EXIT_FAILURE);
 }
 
+void nonfatalerror(char *s)
+{
+	fprintf(stderr, "%s\n", s);
+}

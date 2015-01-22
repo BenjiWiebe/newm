@@ -3,6 +3,7 @@
 
 void fatalperror(char *s);
 void fatalerror(char *s);
+void nonfatalerror(char *s);
 
 #endif
 
