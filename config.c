@@ -48,7 +48,7 @@ struct _config *load_config(char *filename)
 			continue; // Empty line/Comment
 		}
 		int i;
-		for(i = 0; isalnum(line[i]) || line[i] == '_'; i++);
+		for(i = 0; isalnum(line[i]) || line[i] == '-'; i++);
 		char *name = malloc(i + 1); // Get memory for name + terminating NULL
 		if(name == NULL)
 			fatalperror("malloc");
