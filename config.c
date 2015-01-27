@@ -173,6 +173,10 @@ void insert_option(char *key, char *value, struct _config *cfg)
 			nonfatalerror("Unknown value for 'listen', should be one of all,none,ins,outs.\n");
 		}
 	}
+	else
+	{
+		nonfatalerror("Unknown option in config file.\n");
+	}
 	(void)cfg;
 }
 
