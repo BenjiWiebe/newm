@@ -96,6 +96,9 @@ int main()
 			fatalperror("fork");
 		/* This setpgid() call changes the process-group ID so 'w' reports the shell (not us!) as the current command */
 		setpgid(getpid(),getpid());
+		/* Close stdin, and hang up the TTY, since we really can't access them from the "background" */
+		close(STDIN_FILENO);
+		vhangup();
 	}
 
 	/* Set up child-reaping for login-command */
