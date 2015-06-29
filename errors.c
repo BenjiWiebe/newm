@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include "errors.h"
 
 void fatalperror(char *s)
@@ -8,13 +10,25 @@ void fatalperror(char *s)
 	exit(EXIT_FAILURE);
 }
 
-void fatalerror(char *s)
+static void print_error(char *s, va_list ap, bool do_exit, int exit_val)
 {
-	fprintf(stderr, "%s\n", s);
-	exit(EXIT_FAILURE);
+	vfprintf(stderr, s, ap);
+	if(do_exit)
+		exit(exit_val);
 }
 
-void nonfatalerror(char *s)
+void fatalerror(char *s, ...)
 {
-	fprintf(stderr, "%s\n", s);
+	va_list ap;
+	va_start(ap, s);
+	print_error(s, ap, true, EXIT_FAILURE);
+	va_end(ap);
+}
+
+void nonfatalerror(char *s, ...)
+{
+	va_list ap;
+	va_start(ap, s);
+	print_error(s, ap, false, 0);
+	va_end(ap);
 }

@@ -2,8 +2,8 @@
 #define __ERRORS_H_INC_
 
 void fatalperror(char *s);
-void fatalerror(char *s);
-void nonfatalerror(char *s);
+void fatalerror(char *s, ...);
+void nonfatalerror(char *s, ...);
 
 #endif
 

@@ -57,7 +57,7 @@ struct _config *load_config(char *filename)
 		line += i;
 		// OPTIONAL Move past whitespace
 		if(line[0] != '=')
-			fatalerror("Syntax error in configuration file.\n");
+			fatalerror("Syntax error in configuration file on line %d.\n", line_number);
 		line++; // Move past equal sign
 		// OPTIONAL Move past whitespace
 		for(i = 0; line[i] != 0; i++); // Count the bytes in the value
@@ -170,12 +170,12 @@ void insert_option(char *key, char *value, struct _config *cfg)
 		}
 		else
 		{
-			nonfatalerror("Unknown value for 'listen', should be one of all,none,ins,outs.\n");
+			nonfatalerror("Unknown value '%s' for 'listen', should be one of all,none,ins,outs.\n", value);
 		}
 	}
 	else
 	{
-		nonfatalerror("Unknown option in config file.\n");
+		nonfatalerror("Unknown option '%s' in config file.\n", key);
 	}
 	(void)cfg;
 }
@@ -187,7 +187,7 @@ bool str_to_bool(char *str)
 	else if(!strcmp(str, "no") || !strcmp(str, "false") || !strcmp(str, "0"))
 		return false;
 	else
-		nonfatalerror("Invalid boolean value in configuration file.\n");
+		nonfatalerror("Invalid boolean value '%s' in configuration file.\n", str);
 	return false;
 }
 
