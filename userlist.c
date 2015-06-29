@@ -51,6 +51,8 @@ void ul_populate(struct userlist *l)
 void ul_sort(struct userlist *l)
 {
 	bool done = false;
+	if(l->array[0] == NULL)
+		return;
 	while(!done)
 	{
 		done = true;

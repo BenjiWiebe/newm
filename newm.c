@@ -71,14 +71,21 @@ int main()
 		struct userlist *ls = ul_create(8);
 		ul_populate(ls);
 		ul_sort(ls);
-		printf("Users logged in: ");
-		for(int i = 0; ls->array[i] != NULL; i++)
+		if(ls->array[0] == NULL)
 		{
-			if(i > 0 && !strcmp(ls->array[i], ls->array[i-1]))
-				continue;
-			printf("%s, ", ls->array[i]);
+			printf("No users logged in.\n");
 		}
-		printf("\b\b  \n");
+		else
+		{
+			printf("Users logged in: ");
+			for(int i = 0; ls->array[i] != NULL; i++)
+			{
+				if(i > 0 && !strcmp(ls->array[i], ls->array[i-1]))
+					continue;
+				printf("%s, ", ls->array[i]);
+			}
+			printf("\b\b  \n");
+		}
 		ul_free(ls);
 	}
 
